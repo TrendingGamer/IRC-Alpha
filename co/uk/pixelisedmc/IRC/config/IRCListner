@@ -1,0 +1,42 @@
+package co.uk.pixelisedmc.IRC;
+
+import net.md_5.bungee.api.ProxyServer;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
+import org.jibble.pircbot.PircBot;
+
+public class IRCListner
+  extends PircBot
+{
+  private final IRCMain plugin;
+  
+  public IRCListner(IRCMain aThis)
+  {
+    this.plugin = aThis;
+    setName(this.plugin.config.ircNick);
+  }
+  
+  public void onMessage(String channel, String sender, String login, String hostname, String message)
+  {
+    if (message.startsWith("hello?")) {
+      sendMessage(channel, sender + ": hi");
+    }
+    String format;
+    if (!message.startsWith("."))
+    {
+      format = this.plugin.getConfig().chatFormat;
+      String chatMessage = this.plugin.decolorize(message);
+      format = this.plugin.replaceIrcPlaceholders(sender, channel, chatMessage, format);
+      format = this.plugin.colorize(format);
+      for (ProxiedPlayer pl : this.plugin.getProxy().getPlayers()) {
+        if ((pl instanceof ProxiedPlayer)) {
+          pl.sendMessage(format);
+        }
+      }
+    }
+    else if (message.equalsIgnoreCase(".players"))
+    {
+      sendMessage(channel, sender + ": There are " + this.plugin.getProxy().getOnlineCount() + " players online.");
+      sendMessage(channel, sender + ": They are: " + this.plugin.getProxy().getPlayers().toString());
+    }
+  }
+}
