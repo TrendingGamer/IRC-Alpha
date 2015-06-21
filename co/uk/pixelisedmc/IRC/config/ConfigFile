@@ -1,0 +1,17 @@
+package co.uk.pixelisedmc.IRC;
+
+import java.io.File;
+import co.uk.pixelisedmc.IRC.config.Config;
+
+public class ConfigFile
+{
+  private static String configpath = File.separator + "plugins" + File.separator + "BungeeIRC" + File.separator + "settings.yml";
+  public Config c = new Config(configpath);
+  public String serverHostname = this.c.getString("IRC Server Hostname", "irc.esper.net");
+  public int port = this.c.getInt("IRC Server Port", 6667);
+  public String ircNick = this.c.getString("IRC Nickname", "MyFirstBungeeIrcBot");
+  public String nickservPass = this.c.getString("IRC Nickserv Password", "");
+  public String channelName = this.c.getString("Channel Name", "#icantconfig");
+  public String chatFormat = this.c.getString("Chat Format", "&b[%from] %player:&f %message");
+  public boolean crossServerChat = this.c.getBoolean("Cross Server Chat", false);
+}
