@@ -1,4 +1,3 @@
-Enter file contents here@@ -0,0 +1,40 @@
 package co.uk.pixelisedmc.IRC.config;
 
 public class ConfigurationOptions
