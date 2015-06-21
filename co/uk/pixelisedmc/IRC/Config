@@ -1,0 +1,215 @@
+Enter file contents here@@ -0,0 +1,214 @@
+package co.uk.pixelisedmc.IRC.config;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import net.md_5.bungee.config.YamlConfiguration;
+
+public class Config
+{
+  private FileConfiguration fconfig;
+  private String path;
+  
+  public Config(String path)
+  {
+    this.path = (System.getProperty("user.dir") + path);
+    createFile();
+    this.fconfig = YamlConfiguration.loadConfiguration(new File(System.getProperty("user.dir") + path));
+  }
+  
+  public void load()
+  {
+    createFile();
+    try
+    {
+      this.fconfig.load(this.path);
+    }
+    catch (Exception e)
+    {
+      e.printStackTrace();
+    }
+  }
+  
+  public void save()
+  {
+    createFile();
+    try
+    {
+      this.fconfig.save(this.path);
+    }
+    catch (Exception e)
+    {
+      e.printStackTrace();
+    }
+  }
+  
+  public void createFile()
+  {
+    File file = new File(this.path);
+    if (!file.exists())
+    {
+      file.getParentFile().mkdirs();
+      try
+      {
+        file.createNewFile();
+      }
+      catch (Exception e)
+      {
+        e.printStackTrace();
+      }
+    }
+  }
+  
+  public String getString(String key, String def)
+  {
+    if (this.fconfig.contains(key)) {
+      return this.fconfig.getString(key);
+    }
+    this.fconfig.set(key, def);
+    try
+    {
+      this.fconfig.save(this.path);
+    }
+    catch (IOException e)
+    {
+      e.printStackTrace();
+    }
+    return def;
+  }
+  
+  public int getInt(String key, int def)
+  {
+    if (this.fconfig.contains(key)) {
+      return this.fconfig.getInt(key);
+    }
+    this.fconfig.set(key, Integer.valueOf(def));
+    try
+    {
+      this.fconfig.save(this.path);
+    }
+    catch (IOException e)
+    {
+      e.printStackTrace();
+    }
+    return def;
+  }
+  
+  public boolean getBoolean(String key, boolean def)
+  {
+    if (this.fconfig.contains(key)) {
+      return this.fconfig.getBoolean(key);
+    }
+    this.fconfig.set(key, Boolean.valueOf(def));
+    try
+    {
+      this.fconfig.save(this.path);
+    }
+    catch (IOException e)
+    {
+      e.printStackTrace();
+    }
+    return def;
+  }
+  
+  public List<String> getListString(String key, List<String> def)
+  {
+    if (this.fconfig.contains(key)) {
+      return this.fconfig.getStringList(key);
+    }
+    this.fconfig.set(key, def);
+    try
+    {
+      this.fconfig.save(this.path);
+    }
+    catch (IOException e)
+    {
+      e.printStackTrace();
+    }
+    return def;
+  }
+  
+  public double getDouble(String key, double def)
+  {
+    if (this.fconfig.contains(key)) {
+      return this.fconfig.getDouble(key);
+    }
+    this.fconfig.set(key, Double.valueOf(def));
+    try
+    {
+      this.fconfig.save(this.path);
+    }
+    catch (IOException e)
+    {
+      e.printStackTrace();
+    }
+    return def;
+  }
+  
+  public void setString(String key, String val)
+  {
+    this.fconfig.set(key, val);
+    try
+    {
+      this.fconfig.save(this.path);
+    }
+    catch (IOException e)
+    {
+      e.printStackTrace();
+    }
+  }
+  
+  public void setInt(String key, int val)
+  {
+    this.fconfig.set(key, Integer.valueOf(val));
+    try
+    {
+      this.fconfig.save(this.path);
+    }
+    catch (IOException e)
+    {
+      e.printStackTrace();
+    }
+  }
+  
+  public void setBool(String key, boolean val)
+  {
+    this.fconfig.set(key, Boolean.valueOf(val));
+    try
+    {
+      this.fconfig.save(this.path);
+    }
+    catch (IOException e)
+    {
+      e.printStackTrace();
+    }
+  }
+  
+  public void setListString(String key, List<String> val)
+  {
+    this.fconfig.set(key, val);
+    try
+    {
+      this.fconfig.save(this.path);
+    }
+    catch (IOException e)
+    {
+      e.printStackTrace();
+    }
+  }
+  
+  public List<String> getSubNodes(String node)
+  {
+    List<String> ret = new ArrayList();
+    try
+    {
+      for (Object o : this.fconfig.getConfigurationSection(node).getKeys(false)) {
+        ret.add((String)o);
+      }
+    }
+    catch (Exception e) {}
+    return ret;
+  }
+}
