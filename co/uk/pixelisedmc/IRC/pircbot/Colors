@@ -1,0 +1,116 @@
+package org.jibble.pircbot;
+
+public class Colors
+{
+  public static final String NORMAL = "\017";
+  public static final String BOLD = "\002";
+  public static final String UNDERLINE = "\037";
+  public static final String REVERSE = "\026";
+  public static final String WHITE = "\00300";
+  public static final String BLACK = "\00301";
+  public static final String DARK_BLUE = "\00302";
+  public static final String DARK_GREEN = "\00303";
+  public static final String RED = "\00304";
+  public static final String BROWN = "\00305";
+  public static final String PURPLE = "\00306";
+  public static final String OLIVE = "\00307";
+  public static final String YELLOW = "\00308";
+  public static final String GREEN = "\00309";
+  public static final String TEAL = "\00310";
+  public static final String CYAN = "\00311";
+  public static final String BLUE = "\00312";
+  public static final String MAGENTA = "\00313";
+  public static final String DARK_GRAY = "\00314";
+  public static final String LIGHT_GRAY = "\00315";
+  
+  public static String removeColors(String line)
+  {
+    int length = line.length();
+    StringBuffer buffer = new StringBuffer();
+    int i = 0;
+    while (i < length)
+    {
+      char ch = line.charAt(i);
+      if (ch == '\003')
+      {
+        i++;
+        if (i < length)
+        {
+          ch = line.charAt(i);
+          if (Character.isDigit(ch))
+          {
+            i++;
+            if (i < length)
+            {
+              ch = line.charAt(i);
+              if (Character.isDigit(ch)) {
+                i++;
+              }
+            }
+            if (i < length)
+            {
+              ch = line.charAt(i);
+              if (ch == ',')
+              {
+                i++;
+                if (i < length)
+                {
+                  ch = line.charAt(i);
+                  if (Character.isDigit(ch))
+                  {
+                    i++;
+                    if (i < length)
+                    {
+                      ch = line.charAt(i);
+                      if (Character.isDigit(ch)) {
+                        i++;
+                      }
+                    }
+                  }
+                  else
+                  {
+                    i--;
+                  }
+                }
+                else
+                {
+                  i--;
+                }
+              }
+            }
+          }
+        }
+      }
+      else if (ch == '\017')
+      {
+        i++;
+      }
+      else
+      {
+        buffer.append(ch);
+        i++;
+      }
+    }
+    return buffer.toString();
+  }
+  
+  public static String removeFormatting(String line)
+  {
+    int length = line.length();
+    StringBuffer buffer = new StringBuffer();
+    for (int i = 0; i < length; i++)
+    {
+      char ch = line.charAt(i);
+      if ((ch != '\017') && (ch != '\002') && (ch != '\037') && (ch != '\026')) {
+        buffer.append(ch);
+      }
+    }
+    return buffer.toString();
+  }
+  
+  public static String removeFormattingAndColors(String line)
+  {
+    return removeFormatting(removeColors(line));
+  }
+}
+\ No newline at end of file
