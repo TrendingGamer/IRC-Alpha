@@ -1,0 +1,97 @@
+package co.uk.pixelisedmc.IRC;
+
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import net.md_5.bungee.api.ProxyServer;
+import net.md_5.bungee.api.config.ServerInfo;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.connection.Server;
+import net.md_5.bungee.api.plugin.Listener;
+import net.md_5.bungee.api.plugin.Plugin;
+import net.md_5.bungee.api.scheduler.TaskScheduler;
+
+public class IRCMain
+  extends Plugin
+  implements Listener
+{
+  private static IRCMain thisFile;
+  public static ServerInfo hub;
+  public final ConfigFile config = new ConfigFile();
+  private IRCListener bot;
+  
+  public void onEnable()
+  {
+    this.bot = new IRCListener(this);
+    
+    thisFile = this;
+    getProxy().getLogger().log(Level.INFO, "BungeeIRC is enabling!");
+    
+    getProxy().getScheduler().runAsync(this, new Runnable()
+    {
+      public void run()
+      {
+        try
+        {
+          IRCMain.this.bot.connect(IRCMain.this.config.serverHostname, IRCMain.this.config.port);
+          
+          IRCMain.this.bot.joinChannel(IRCMain.this.config.channelName);
+        }
+        catch (Exception ex)
+        {
+          ex.printStackTrace();
+        }
+      }
+    });
+    BungeeListener listener = new BungeeListener(this);
+    
+    getProxy().getLogger().log(Level.INFO, "BungeeIRC is enabled!");
+  }
+  
+  public void onDisable()
+  {
+    getProxy().getLogger().log(Level.INFO, "BungeeIRC is disabling!");
+  }
+  
+  public static IRCMain getPlugin()
+  {
+    return thisFile;
+  }
+  
+  public IRCListener getBot()
+  {
+    return this.bot;
+  }
+  
+  public ConfigFile getConfig()
+  {
+    return this.config;
+  }
+  
+  public String replaceMinecraftPlaceholders(ProxiedPlayer player, String message, String format)
+  {
+    return format.replaceAll("%from", player.getServer().getInfo().getName()).replaceAll("%uuid", player.getUniqueId().toString()).replaceAll("%player", player.getName()).replaceAll("%message", message).replaceAll("%displayname", player.getDisplayName());
+  }
+  
+  public String replaceIrcPlaceholders(String player, String channel, String message, String format)
+  {
+    return format.replaceAll("%from", channel).replaceAll("%uuid", "").replaceAll("%player", player).replaceAll("%message", message).replaceAll("%displayname", player);
+  }
+  
+  public String colorize(String string)
+  {
+    if (string == null) {
+      return "";
+    }
+    return string.replaceAll("&([a-z0-9])", "§$1");
+  }
+  
+  public String decolorize(String string)
+  {
+    if (string == null) {
+      return "";
+    }
+    return string.replaceAll("&([a-z0-9])", "").replaceAll("�([a-z0-9])", "");
+  }
+}
+\ No newline at end of file
