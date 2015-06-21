@@ -1,4 +1,3 @@
-@@ -0,0 +1,98 @@
 package co.uk.pixelisedmc.IRC.config;
 
 import java.util.List;
