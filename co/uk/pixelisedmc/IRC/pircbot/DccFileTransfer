@@ -1,0 +1,361 @@
+package org.jibble.pircbot;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public class DccFileTransfer
+{
+  public static final int BUFFER_SIZE = 1024;
+  private PircBot _bot;
+  private DccManager _manager;
+  private String _nick;
+  
+  DccFileTransfer(PircBot bot, DccManager manager, String nick, String login, String hostname, String type, String filename, long address, int port, long size)
+  {
+    this._bot = bot;
+    this._manager = manager;
+    this._nick = nick;
+    this._login = login;
+    this._hostname = hostname;
+    this._type = type;
+    this._file = new File(filename);
+    this._address = address;
+    this._port = port;
+    this._size = size;
+    this._received = false;
+    
+    this._incoming = true;
+  }
+  
+  DccFileTransfer(PircBot bot, DccManager manager, File file, String nick, int timeout)
+  {
+    this._bot = bot;
+    this._manager = manager;
+    this._nick = nick;
+    this._file = file;
+    this._size = file.length();
+    this._timeout = timeout;
+    this._received = true;
+    
+    this._incoming = false;
+  }
+  
+  public synchronized void receive(File file, boolean resume)
+  {
+    if (!this._received)
+    {
+      this._received = true;
+      this._file = file;
+      if ((this._type.equals("SEND")) && (resume))
+      {
+        this._progress = file.length();
+        if (this._progress == 0L)
+        {
+          doReceive(file, false);
+        }
+        else
+        {
+          this._bot.sendCTCPCommand(this._nick, "DCC RESUME file.ext " + this._port + " " + this._progress);
+          this._manager.addAwaitingResume(this);
+        }
+      }
+      else
+      {
+        this._progress = file.length();
+        doReceive(file, resume);
+      }
+    }
+  }
+  
+  void doReceive(final File file, final boolean resume)
+  {
+    new Thread()
+    {
+      public void run()
+      {
+        BufferedOutputStream foutput = null;
+        Exception exception = null;
+        try
+        {
+          int[] ip = DccFileTransfer.this._bot.longToIp(DccFileTransfer.this._address);
+          String ipStr = ip[0] + "." + ip[1] + "." + ip[2] + "." + ip[3];
+          
+          DccFileTransfer.this._socket = new Socket(ipStr, DccFileTransfer.this._port);
+          DccFileTransfer.this._socket.setSoTimeout(30000);
+          DccFileTransfer.this._startTime = System.currentTimeMillis();
+          
+          DccFileTransfer.this._manager.removeAwaitingResume(DccFileTransfer.this);
+          
+          BufferedInputStream input = new BufferedInputStream(DccFileTransfer.this._socket.getInputStream());
+          BufferedOutputStream output = new BufferedOutputStream(DccFileTransfer.this._socket.getOutputStream());
+          
+          foutput = new BufferedOutputStream(new FileOutputStream(file.getCanonicalPath(), resume));
+          
+          byte[] inBuffer = new byte['?'];
+          byte[] outBuffer = new byte[4];
+          int bytesRead = 0;
+          while ((bytesRead = input.read(inBuffer, 0, inBuffer.length)) != -1)
+          {
+            foutput.write(inBuffer, 0, bytesRead);
+            DccFileTransfer.access$614(DccFileTransfer.this, bytesRead);
+            
+            outBuffer[0] = ((byte)(int)(DccFileTransfer.this._progress >> 24 & 0xFF));
+            outBuffer[1] = ((byte)(int)(DccFileTransfer.this._progress >> 16 & 0xFF));
+            outBuffer[2] = ((byte)(int)(DccFileTransfer.this._progress >> 8 & 0xFF));
+            outBuffer[3] = ((byte)(int)(DccFileTransfer.this._progress >> 0 & 0xFF));
+            output.write(outBuffer);
+            output.flush();
+            DccFileTransfer.this.delay();
+          }
+          foutput.flush();
+          try
+          {
+            foutput.close();
+            DccFileTransfer.this._socket.close();
+          }
+          catch (Exception anye) {}
+          DccFileTransfer.this._bot.onFileTransferFinished(DccFileTransfer.this, exception);
+        }
+        catch (Exception e)
+        {
+          exception = e;
+        }
+        finally
+        {
+          try
+          {
+            foutput.close();
+            DccFileTransfer.this._socket.close();
+          }
+          catch (Exception anye) {}
+        }
+      }
+    }.start();
+  }
+  
+  void doSend(final boolean allowResume)
+  {
+    new Thread()
+    {
+      public void run()
+      {
+        BufferedInputStream finput = null;
+        Exception exception = null;
+        try
+        {
+          ServerSocket ss = null;
+          
+          int[] ports = DccFileTransfer.this._bot.getDccPorts();
+          if (ports == null)
+          {
+            ss = new ServerSocket(0);
+          }
+          else
+          {
+            for (int i = 0; i < ports.length; i++) {
+              try
+              {
+                ss = new ServerSocket(ports[i]);
+              }
+              catch (Exception e) {}
+            }
+            if (ss == null) {
+              throw new IOException("All ports returned by getDccPorts() are in use.");
+            }
+          }
+          ss.setSoTimeout(DccFileTransfer.this._timeout);
+          DccFileTransfer.this._port = ss.getLocalPort();
+          InetAddress inetAddress = DccFileTransfer.this._bot.getDccInetAddress();
+          if (inetAddress == null) {
+            inetAddress = DccFileTransfer.this._bot.getInetAddress();
+          }
+          byte[] ip = inetAddress.getAddress();
+          long ipNum = DccFileTransfer.this._bot.ipToLong(ip);
+          
+          String safeFilename = DccFileTransfer.this._file.getName().replace(' ', '_');
+          safeFilename = safeFilename.replace('\t', '_');
+          if (allowResume) {
+            DccFileTransfer.this._manager.addAwaitingResume(DccFileTransfer.this);
+          }
+          DccFileTransfer.this._bot.sendCTCPCommand(DccFileTransfer.this._nick, "DCC SEND " + safeFilename + " " + ipNum + " " + DccFileTransfer.this._port + " " + DccFileTransfer.this._file.length());
+          
+          DccFileTransfer.this._socket = ss.accept();
+          DccFileTransfer.this._socket.setSoTimeout(30000);
+          DccFileTransfer.this._startTime = System.currentTimeMillis();
+          if (allowResume) {
+            DccFileTransfer.this._manager.removeAwaitingResume(DccFileTransfer.this);
+          }
+          ss.close();
+          
+          BufferedOutputStream output = new BufferedOutputStream(DccFileTransfer.this._socket.getOutputStream());
+          BufferedInputStream input = new BufferedInputStream(DccFileTransfer.this._socket.getInputStream());
+          finput = new BufferedInputStream(new FileInputStream(DccFileTransfer.this._file));
+          if (DccFileTransfer.this._progress > 0L)
+          {
+            long bytesSkipped = 0L;
+            while (bytesSkipped < DccFileTransfer.this._progress) {
+              bytesSkipped += finput.skip(DccFileTransfer.this._progress - bytesSkipped);
+            }
+          }
+          byte[] outBuffer = new byte['?'];
+          byte[] inBuffer = new byte[4];
+          int bytesRead = 0;
+          while ((bytesRead = finput.read(outBuffer, 0, outBuffer.length)) != -1)
+          {
+            output.write(outBuffer, 0, bytesRead);
+            output.flush();
+            input.read(inBuffer, 0, inBuffer.length);
+            DccFileTransfer.access$614(DccFileTransfer.this, bytesRead);
+            DccFileTransfer.this.delay();
+          }
+          try
+          {
+            finput.close();
+            DccFileTransfer.this._socket.close();
+          }
+          catch (Exception e) {}
+          DccFileTransfer.this._bot.onFileTransferFinished(DccFileTransfer.this, exception);
+        }
+        catch (Exception e)
+        {
+          exception = e;
+        }
+        finally
+        {
+          try
+          {
+            finput.close();
+            DccFileTransfer.this._socket.close();
+          }
+          catch (Exception e) {}
+        }
+      }
+    }.start();
+  }
+  
+  protected static void access$614(DccFileTransfer dccFileTransfer, int bytesRead) {
+	// TODO Auto-generated method stub
+	
+}
+
+void setProgress(long progress)
+  {
+    this._progress = progress;
+  }
+  
+  private void delay()
+  {
+    if (this._packetDelay > 0L) {
+      try
+      {
+        Thread.sleep(this._packetDelay);
+      }
+      catch (InterruptedException e) {}
+    }
+  }
+  
+  public String getNick()
+  {
+    return this._nick;
+  }
+  
+  public String getLogin()
+  {
+    return this._login;
+  }
+  
+  public String getHostname()
+  {
+    return this._hostname;
+  }
+  
+  public File getFile()
+  {
+    return this._file;
+  }
+  
+  public int getPort()
+  {
+    return this._port;
+  }
+  
+  public boolean isIncoming()
+  {
+    return this._incoming;
+  }
+  
+  public boolean isOutgoing()
+  {
+    return !isIncoming();
+  }
+  
+  public void setPacketDelay(long millis)
+  {
+    this._packetDelay = millis;
+  }
+  
+  public long getPacketDelay()
+  {
+    return this._packetDelay;
+  }
+  
+  public long getSize()
+  {
+    return this._size;
+  }
+  
+  public long getProgress()
+  {
+    return this._progress;
+  }
+  
+  public double getProgressPercentage()
+  {
+    return 100.0D * (getProgress() / getSize());
+  }
+  
+  public void close()
+  {
+    try
+    {
+      this._socket.close();
+    }
+    catch (Exception e) {}
+  }
+  
+  public long getTransferRate()
+  {
+    long time = (System.currentTimeMillis() - this._startTime) / 1000L;
+    if (time <= 0L) {
+      return 0L;
+    }
+    return getProgress() / time;
+  }
+  
+  public long getNumericalAddress()
+  {
+    return this._address;
+  }
+  
+  private String _login = null;
+  private String _hostname = null;
+  private String _type;
+  private long _address;
+  private int _port;
+  private long _size;
+  private boolean _received;
+  private Socket _socket = null;
+  private long _progress = 0L;
+  private File _file = null;
+  private int _timeout = 0;
+  private boolean _incoming;
+  private long _packetDelay = 0L;
+  private long _startTime = 0L;
+}
