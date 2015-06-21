@@ -1,0 +1,10 @@
+@@ -0,0 +1,8 @@
+package co.uk.pixelisedmc.IRC.config;
+
+import java.util.Map;
+
+public abstract interface ConfigurationSerializable
+{
+  public abstract Map<String, Object> serialize();
+}
+\ No newline at end of file
